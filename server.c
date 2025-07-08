@@ -30,6 +30,17 @@ void main() {
     recv(client_fd, buffer, 256, 0); // store the HTTP request into buffer
 
     // Example buffer now likely contains: "GET /filename HTTP/1.1\r\n..."
+    
+    
+    // 7. Extract the requested file path from the GET request
+    char* f = buffer + 5;            // skip "GET /" (5 bytes)
+    *strchr(f, ' ') = 0;             // terminate the string at the first space
+    
+    // f now contains the filename like "index.html" (no leading '/')
+    
+    // 8. Open the file requested
+    int opened_fd = open(f, O_RDONLY); // read-only file descriptor
+    
     char* ok_header =
     "HTTP/1.1 200 OK\r\n"
     "Content-Type: text/html\r\n"
@@ -37,16 +48,6 @@ void main() {
     "\r\n";
 
     send(client_fd, ok_header, strlen(ok_header), 0);
-
-
-    // 7. Extract the requested file path from the GET request
-    char* f = buffer + 5;            // skip "GET /" (5 bytes)
-    *strchr(f, ' ') = 0;             // terminate the string at the first space
-
-    // f now contains the filename like "index.html" (no leading '/')
-
-    // 8. Open the file requested
-    int opened_fd = open(f, O_RDONLY); // read-only file descriptor
 
     // 9. Send file contents to client (does NOT include HTTP headers!)
     sendfile(client_fd, opened_fd, 0, 256); // just sends raw file bytes
