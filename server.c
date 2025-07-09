@@ -40,6 +40,9 @@ void main() {
     
     // 8. Open the file requested
     int opened_fd = open(f, O_RDONLY); // read-only file descriptor
+    struct stat st;
+    fstat(opened_fd, &st); // file stats
+
     
     char* ok_header =
     "HTTP/1.1 200 OK\r\n"
@@ -50,7 +53,9 @@ void main() {
     send(client_fd, ok_header, strlen(ok_header), 0);
 
     // 9. Send file contents to client (does NOT include HTTP headers!)
-    sendfile(client_fd, opened_fd, 0, 256); // just sends raw file bytes
+
+
+    sendfile(client_fd, opened_fd, 0, st.st_size); // just sends raw file bytes
 
     // 10. Close all file descriptors and sockets
     close(opened_fd);

@@ -2,9 +2,8 @@ import requests
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument("filename", help="enter file name")
+parser.add_argument("-filename", help="enter file name", default="index.html")
 args = parser.parse_args()
-
 
 res = requests.get(f"http://localhost:8080/{args.filename}")
 
