@@ -4,8 +4,9 @@
 #include <fcntl.h>           // For open()
 #include <sys/sendfile.h>    // For sendfile()
 #include <unistd.h>          // For read(), write(), close()
+#include <sys/stat.h>
 
-void main() {
+int main() {
     // 1. Create a TCP socket (IPv4, stream-oriented)
     int s = socket(AF_INET, SOCK_STREAM, 0); // returns a socket file descriptor
 
@@ -40,22 +41,38 @@ void main() {
     
     // 8. Open the file requested
     int opened_fd = open(f, O_RDONLY); // read-only file descriptor
-    struct stat st;
-    fstat(opened_fd, &st); // file stats
 
+    // check if file actually exists for 404
+    if (opened_fd == -1) {
+        // if file does NOT exist
+        char* not_found_response =
+            "HTTP/1.1 404 Not Found\r\n"
+            "Content-Type: text/html\r\n"
+            "Connection: close\r\n"
+            "\r\n"
+            "<html><body><h1>404 Not Found</h1></body></html>\n";
+
+        send(client_fd, not_found_response, strlen(not_found_response), 0);
+    } else {
+        // if file DOES exist
+        struct stat st;
+        fstat(opened_fd, &st); // file stats
     
-    char* ok_header =
-    "HTTP/1.1 200 OK\r\n"
-    "Content-Type: text/html\r\n"
-    "Connection: close\r\n"
-    "\r\n";
+        // this is what is sent to the client as a HTTP header
+        char* ok_header =
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Type: text/html\r\n"
+        "Connection: close\r\n"
+        "\r\n";
+    
+        send(client_fd, ok_header, strlen(ok_header), 0);
+    
+        // 9. Send file contents to client (does NOT include HTTP headers!)
+    
+    
+        sendfile(client_fd, opened_fd, 0, st.st_size); // just sends raw file bytes
 
-    send(client_fd, ok_header, strlen(ok_header), 0);
-
-    // 9. Send file contents to client (does NOT include HTTP headers!)
-
-
-    sendfile(client_fd, opened_fd, 0, st.st_size); // just sends raw file bytes
+    }
 
     // 10. Close all file descriptors and sockets
     close(opened_fd);
