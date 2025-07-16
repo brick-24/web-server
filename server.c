@@ -5,6 +5,18 @@
 #include <sys/sendfile.h>    // For sendfile()
 #include <unistd.h>          // For read(), write(), close()
 #include <sys/stat.h>
+#include <stdio.h>           // For snfprintf()
+
+const char* get_mime_type(const char* ext) {
+    if (strcmp(ext, ".html") == 0) return "text/html";
+    if (strcmp(ext, ".css") == 0)  return "text/css";
+    if (strcmp(ext, ".js") == 0)   return "application/javascript";
+    if (strcmp(ext, ".png") == 0)  return "image/png";
+    if (strcmp(ext, ".jpg") == 0 || strcmp(ext, ".jpeg") == 0) return "image/jpeg";
+    if (strcmp(ext, ".gif") == 0)  return "image/gif";
+    if (strcmp(ext, ".txt") == 0)  return "text/plain";
+    else return "404";
+}
 
 int main() {
     // 1. Create a TCP socket (IPv4, stream-oriented)
@@ -35,6 +47,7 @@ int main() {
     
     // 7. Extract the requested file path from the GET request
     char* f = buffer + 5;            // skip "GET /" (5 bytes)
+    char* file_ext = strrchr(f, '.');
     *strchr(f, ' ') = 0;             // terminate the string at the first space
     
     // f now contains the filename like "index.html" (no leading '/')
@@ -59,23 +72,35 @@ int main() {
         fstat(opened_fd, &st); // file stats
     
         // this is what is sent to the client as a HTTP header
-        char* ok_header =
-        "HTTP/1.1 200 OK\r\n"
-        "Content-Type: text/html\r\n"
-        "Connection: close\r\n"
-        "\r\n";
+        // char* ok_header =
+        // "HTTP/1.1 200 OK\r\n"
+        // "Content-Type: text/html\r\n"
+        // "Connection: close\r\n"
+        // "\r\n";
     
-        send(client_fd, ok_header, strlen(ok_header), 0);
+        char header[512];
+        snprintf(header, sizeof(header),
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: %s\r\n"
+            "Content-Length: %ld\r\n"
+            "Connection: close\r\n"
+            "\r\n",
+            get_mime_type(file_ext), st.st_size);
+
+
+        send(client_fd, header, strlen(header), 0);
     
-        // 9. Send file contents to client (does NOT include HTTP headers!)
-    
-    
+        // 9. Send file contents to client (does NOT include HTTP headers!)    
         sendfile(client_fd, opened_fd, 0, st.st_size); // just sends raw file bytes
 
     }
 
     // 10. Close all file descriptors and sockets
-    close(opened_fd);
+    if (opened_fd != -1){
+        close(opened_fd);
+    }
     close(client_fd);
     close(s);
 }
+
+
