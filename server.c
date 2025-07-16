@@ -35,71 +35,73 @@ int main() {
     // 4. Set the socket to listen for incoming connections
     listen(s, 10); // backlog = 10
 
-    // 5. Accept one incoming client connection (blocks until a connection is made)
-    int client_fd = accept(s, 0, 0);
+    while (1) {
+        // 5. Accept one incoming client connection (blocks until a connection is made)
+        int client_fd = accept(s, 0, 0);
+        
+        // 6. Read the HTTP request into a buffer
+        char buffer[256] = {0};
+        recv(client_fd, buffer, 256, 0); // store the HTTP request into buffer
 
-    // 6. Read the HTTP request into a buffer
-    char buffer[256] = {0};
-    recv(client_fd, buffer, 256, 0); // store the HTTP request into buffer
+        // Example buffer now likely contains: "GET /filename HTTP/1.1\r\n..."
+        
+        
+        // 7. Extract the requested file path from the GET request
+        char* f = buffer + 5;            // skip "GET /" (5 bytes)
+        char* file_ext = strrchr(f, '.');
+        *strchr(f, ' ') = 0;             // terminate the string at the first space
+        
+        // f now contains the filename like "index.html" (no leading '/')
+        
+        // 8. Open the file requested
+        int opened_fd = open(f, O_RDONLY); // read-only file descriptor
 
-    // Example buffer now likely contains: "GET /filename HTTP/1.1\r\n..."
-    
-    
-    // 7. Extract the requested file path from the GET request
-    char* f = buffer + 5;            // skip "GET /" (5 bytes)
-    char* file_ext = strrchr(f, '.');
-    *strchr(f, ' ') = 0;             // terminate the string at the first space
-    
-    // f now contains the filename like "index.html" (no leading '/')
-    
-    // 8. Open the file requested
-    int opened_fd = open(f, O_RDONLY); // read-only file descriptor
+        // check if file actually exists for 404
+        if (opened_fd == -1) {
+            // if file does NOT exist
+            char* not_found_response =
+                "HTTP/1.1 404 Not Found\r\n"
+                "Content-Type: text/html\r\n"
+                "Connection: close\r\n"
+                "\r\n"
+                "<html><body><h1>404 Not Found</h1></body></html>\n";
 
-    // check if file actually exists for 404
-    if (opened_fd == -1) {
-        // if file does NOT exist
-        char* not_found_response =
-            "HTTP/1.1 404 Not Found\r\n"
-            "Content-Type: text/html\r\n"
-            "Connection: close\r\n"
-            "\r\n"
-            "<html><body><h1>404 Not Found</h1></body></html>\n";
-
-        send(client_fd, not_found_response, strlen(not_found_response), 0);
-    } else {
-        // if file DOES exist
-        struct stat st;
-        fstat(opened_fd, &st); // file stats
-    
-        // this is what is sent to the client as a HTTP header
-        // char* ok_header =
-        // "HTTP/1.1 200 OK\r\n"
-        // "Content-Type: text/html\r\n"
-        // "Connection: close\r\n"
-        // "\r\n";
-    
-        char header[512];
-        snprintf(header, sizeof(header),
-            "HTTP/1.1 200 OK\r\n"
-            "Content-Type: %s\r\n"
-            "Content-Length: %ld\r\n"
-            "Connection: close\r\n"
-            "\r\n",
-            get_mime_type(file_ext), st.st_size);
+            send(client_fd, not_found_response, strlen(not_found_response), 0);
+        } else {
+            // if file DOES exist
+            struct stat st;
+            fstat(opened_fd, &st); // file stats
+        
+            // this is what is sent to the client as a HTTP header
+            // char* ok_header =
+            // "HTTP/1.1 200 OK\r\n"
+            // "Content-Type: text/html\r\n"
+            // "Connection: close\r\n"
+            // "\r\n";
+        
+            char header[512];
+            snprintf(header, sizeof(header),
+                "HTTP/1.1 200 OK\r\n"
+                "Content-Type: %s\r\n"
+                "Content-Length: %ld\r\n"
+                "Connection: close\r\n"
+                "\r\n",
+                get_mime_type(file_ext), st.st_size);
 
 
-        send(client_fd, header, strlen(header), 0);
-    
-        // 9. Send file contents to client (does NOT include HTTP headers!)    
-        sendfile(client_fd, opened_fd, 0, st.st_size); // just sends raw file bytes
+            send(client_fd, header, strlen(header), 0);
+        
+            // 9. Send file contents to client (does NOT include HTTP headers!)    
+            sendfile(client_fd, opened_fd, 0, st.st_size); // just sends raw file bytes
 
+        }
+
+        if (opened_fd != -1){
+            close(opened_fd);
+        }
+        close(client_fd); // clean up connection
     }
-
     // 10. Close all file descriptors and sockets
-    if (opened_fd != -1){
-        close(opened_fd);
-    }
-    close(client_fd);
     close(s);
 }
 
