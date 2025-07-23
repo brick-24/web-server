@@ -51,10 +51,17 @@ int main() {
         recv(client_fd, buffer, 256, 0); // store the HTTP request into buffer
 
         printf("Request: %s\n\n", buffer);
-        // Example buffer now likely contains: "GET /filename HTTP/1.1\r\n..."
+        //"GET /no.html HTTP/1.1"
         
         
         // 7. Extract the requested file path from the GET request
+        if (strncmp(buffer, "GET /", 5) != 0) {
+            printf("Bad Request");
+            char* bad_req = "HTTP/1.1 400 Bad Request\r\n";
+            send(client_fd, bad_req, strlen(bad_req), 0);
+            continue;
+        }
+        
         char* f = buffer + 5;            // skip "GET /" (5 bytes)
         char* file_ext = strrchr(f, '.');
         *strchr(f, ' ') = 0;             // terminate the string at the first space
