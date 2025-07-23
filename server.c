@@ -6,6 +6,7 @@
 #include <unistd.h>          // For read(), write(), close()
 #include <sys/stat.h>
 #include <stdio.h>           // For snfprintf()
+#include <arpa/inet.h>       // For inet_ntoa()
 
 const char* get_mime_type(const char* ext) {
     if (strcmp(ext, ".html") == 0) return "text/html";
@@ -36,8 +37,14 @@ int main() {
     listen(s, 10); // backlog = 10
 
     while (1) {
-        // 5. Accept one incoming client connection (blocks until a connection is made)
-        int client_fd = accept(s, 0, 0);
+        struct sockaddr_in client_addr;
+        socklen_t addr_len = sizeof(client_addr);
+        // accept a client on socket s, gives client_addr with IP and port
+        int client_fd = accept(s, (struct sockaddr*)&client_addr, &addr_len);
+
+        char* client_ip = inet_ntoa(client_addr.sin_addr);
+        printf("Client connected from IP: %s\n", client_ip);
+
         
         // 6. Read the HTTP request into a buffer
         char buffer[256] = {0};
