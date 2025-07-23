@@ -43,6 +43,7 @@ int main() {
         char buffer[256] = {0};
         recv(client_fd, buffer, 256, 0); // store the HTTP request into buffer
 
+        printf("Request: %s\n\n", buffer);
         // Example buffer now likely contains: "GET /filename HTTP/1.1\r\n..."
         
         
@@ -50,7 +51,8 @@ int main() {
         char* f = buffer + 5;            // skip "GET /" (5 bytes)
         char* file_ext = strrchr(f, '.');
         *strchr(f, ' ') = 0;             // terminate the string at the first space
-        
+        printf("Requested file: %s\n\n", f);
+
         // f now contains the filename like "index.html" (no leading '/')
         
         // 8. Open the file requested
@@ -59,6 +61,7 @@ int main() {
         // check if file actually exists for 404
         if (opened_fd == -1) {
             // if file does NOT exist
+            printf("Response: 404 Not Found (0 bytes)\n\n");
             char* not_found_response =
                 "HTTP/1.1 404 Not Found\r\n"
                 "Content-Type: text/html\r\n"
@@ -69,9 +72,11 @@ int main() {
             send(client_fd, not_found_response, strlen(not_found_response), 0);
         } else {
             // if file DOES exist
+            
             struct stat st;
             fstat(opened_fd, &st); // file stats
-        
+            
+            printf("Response: 200 OK (%ld bytes)\n\n", st.st_size);
             // this is what is sent to the client as a HTTP header
             // char* ok_header =
             // "HTTP/1.1 200 OK\r\n"
