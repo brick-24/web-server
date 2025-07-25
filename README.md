@@ -14,11 +14,22 @@ A minimalistic HTTP server written in C that handles GET requests, serves files 
 <img width="1448" height="1913" alt="image" src="https://github.com/user-attachments/assets/d9c61934-4cf3-44fc-b761-ded772c69bf8" />
 
 ## Build and Run
+### Compile
+```bash
+gcc server.c -o server
+```
+### Run
+``` bash
+./server
+```
+Then visit [http://localhost:8080/index.html](http://localhost:8080/index.html)
 
 
 ## Example requests
+```
 GET /index.html HTTP/1.1
 Host: localhost:8080
+```
 
 <!--
 so far i've built a C HTTP server that send raw contents of a file in response to a basic HTTP GET request
